@@ -1,0 +1,96 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum Role {
+  EMPLOYER
+  CANDIDATE
+}
+
+enum QuestionType {
+  radio
+  checkbox
+  text
+}
+
+model User {
+  id             String            @id @default(cuid())
+  email          String            @unique
+  name           String
+  password       String
+  role           Role
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+  exams          Exam[]            @relation("EmployerExams")
+  results        CandidateResult[] @relation("CandidateResults")
+  refreshTokens  RefreshToken[]
+
+  @@index([email])
+  @@index([role])
+}
+
+model Exam {
+  id              String            @id @default(cuid())
+  title           String
+  totalCandidates Int
+  totalSlots      Int
+  questionSets    Int
+  questionType    String
+  startTime       DateTime
+  endTime         DateTime
+  duration        Int
+  negativeMarking Boolean           @default(false)
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+  employerId      String
+  employer        User              @relation("EmployerExams", fields: [employerId], references: [id], onDelete: Cascade)
+  questions       Question[]
+  results         CandidateResult[]
+
+  @@index([employerId])
+}
+
+model Question {
+  id       String       @id @default(cuid())
+  title    String
+  type     QuestionType
+  options  String[]
+  order    Int          @default(0)
+  examId   String
+  exam     Exam         @relation(fields: [examId], references: [id], onDelete: Cascade)
+
+  @@index([examId])
+}
+
+model CandidateResult {
+  id              String   @id @default(cuid())
+  answers         Json
+  submittedAt     DateTime @default(now())
+  tabSwitches     Int      @default(0)
+  fullscreenExits Int      @default(0)
+  candidateId     String
+  candidate       User     @relation("CandidateResults", fields: [candidateId], references: [id], onDelete: Cascade)
+  examId          String
+  exam            Exam     @relation(fields: [examId], references: [id], onDelete: Cascade)
+
+  @@unique([candidateId, examId])
+  @@index([candidateId])
+  @@index([examId])
+}
+
+model RefreshToken {
+  id        String   @id @default(cuid())
+  token     String   @unique
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([token])
+}
