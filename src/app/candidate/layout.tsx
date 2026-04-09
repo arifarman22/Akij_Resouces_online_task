@@ -10,7 +10,7 @@ export default function CandidateLayout({ children }: { children: React.ReactNod
   const { currentUser, logout } = useCandidateStore();
   const router = useRouter();
   const pathname = usePathname();
-  const isLoginPage = pathname === "/candidate/login";
+  const isAuthPage = pathname === "/candidate/login" || pathname === "/candidate/register";
 
   const handleLogout = () => {
     authApi.logout();
@@ -21,12 +21,12 @@ export default function CandidateLayout({ children }: { children: React.ReactNod
   return (
     <>
       <Header
-        heading={isLoginPage ? undefined : "Candidate Dashboard"}
-        profile={!isLoginPage && currentUser ? {
+        heading={isAuthPage ? undefined : "Candidate Dashboard"}
+        profile={!isAuthPage && currentUser ? {
           name: currentUser.name,
           refId: currentUser.email.split("@")[0].toUpperCase() + "-" + currentUser.id?.slice(-6).toUpperCase(),
         } : undefined}
-        onLogout={!isLoginPage && currentUser ? handleLogout : undefined}
+        onLogout={!isAuthPage && currentUser ? handleLogout : undefined}
       />
       <div className="flex-1 bg-slate-50 dark:bg-slate-950 flex flex-col">
         <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
