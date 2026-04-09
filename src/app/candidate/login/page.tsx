@@ -27,7 +27,7 @@ const registerSchema = z.object({
 export default function CandidateLogin() {
   const router = useRouter();
   const { login: storeLogin } = useCandidateStore();
-  const { login, register, loading, error } = useAuth("candidate");
+  const { login, register, loading, error, clearError } = useAuth("candidate");
   const [isRegister, setIsRegister] = useState(false);
 
   const loginForm = useForm<z.infer<typeof loginSchema>>({
@@ -39,6 +39,13 @@ export default function CandidateLogin() {
     resolver: zodResolver(registerSchema),
     defaultValues: { name: "", email: "", password: "" },
   });
+
+  const toggleMode = () => {
+    clearError();
+    loginForm.reset();
+    registerForm.reset();
+    setIsRegister((prev) => !prev);
+  };
 
   async function onLogin(values: z.infer<typeof loginSchema>) {
     const res = await login(values.email, values.password);
@@ -172,7 +179,7 @@ export default function CandidateLogin() {
         <CardFooter className="flex flex-col p-0 mt-6">
           <button
             type="button"
-            onClick={() => setIsRegister(!isRegister)}
+            onClick={toggleMode}
             className="text-sm text-[#6633FF] hover:underline"
             style={{ fontWeight: 600 }}
           >

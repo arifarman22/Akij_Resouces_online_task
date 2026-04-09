@@ -57,5 +57,7 @@ export function useAuth(role: "employer" | "candidate") {
     []
   );
 
-  return { login, register, loading, error };
+  const clearError = useCallback(() => setError(null), []);
+
+  return { login, register, loading, error, clearError };
 }
