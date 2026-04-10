@@ -113,6 +113,8 @@ export default function CreateTestPage() {
         totalSlots: Number(d.totalSlots),
         questionSets: Number(d.questionSets),
         duration: Number(d.duration),
+        startTime: new Date(d.startTime).toISOString(),
+        endTime: new Date(d.endTime).toISOString(),
         questions: questions.map((q) => ({ title: q.title, type: q.type, options: q.options || [] })),
       });
       if (res.success) {
