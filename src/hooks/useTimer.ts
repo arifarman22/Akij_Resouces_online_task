@@ -4,7 +4,16 @@ export function useTimer(initialSeconds: number, onTimeout: () => void) {
   const [timeLeft, setTimeLeft] = useState(initialSeconds);
   const [isRunning, setIsRunning] = useState(false);
   const onTimeoutRef = useRef(onTimeout);
+  const prevInitialRef = useRef(initialSeconds);
   onTimeoutRef.current = onTimeout;
+
+  // Sync timeLeft when initialSeconds changes (e.g. exam loads async)
+  useEffect(() => {
+    if (initialSeconds !== prevInitialRef.current && initialSeconds > 0) {
+      setTimeLeft(initialSeconds);
+      prevInitialRef.current = initialSeconds;
+    }
+  }, [initialSeconds]);
 
   useEffect(() => {
     if (!isRunning || timeLeft <= 0) return;
