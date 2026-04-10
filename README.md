@@ -10,6 +10,22 @@ A production-ready online assessment platform built with Next.js 16, React 19, N
 
 ---
 
+## Live Demo
+
+🔗 **[https://akij-resouces-online-task.vercel.app](https://akij-resouces-online-task.vercel.app)**
+
+### Demo Credentials
+
+**Employer (Admin):**
+- Email: `admin@akijresource.com`
+- Password: `Admin@123456`
+
+**Candidate:**
+- Register a new account at `/candidate/register`
+- Or use any previously registered candidate account
+
+---
+
 ## Setup Instructions
 
 ### Prerequisites
@@ -83,13 +99,14 @@ Copy `.env.example` to `.env` and update:
 | Framework | Next.js 16 (App Router) |
 | UI Library | React 19 |
 | Database | Neon PostgreSQL (serverless) |
-| ORM | Prisma 7 (with `@prisma/adapter-neon`) |
+| ORM | Prisma 7 (with `PrismaNeon` adapter) |
 | Authentication | JWT (access + refresh tokens with auto-rotation) |
 | State Management | Zustand (with persist middleware) |
 | Forms | React Hook Form + Zod validation |
 | Styling | Tailwind CSS 4 + ShadCN/UI |
 | HTTP Client | Axios (with interceptors for token refresh) |
 | Language | TypeScript (strict mode) |
+| Deployment | Vercel |
 
 ---
 
@@ -101,15 +118,24 @@ Copy `.env.example` to `.env` and update:
 - "Get Started →" links to respective login pages
 
 ### Employer Panel
-- **Login** — JWT authentication with email & password, loading states, error handling
+- **Login** — JWT authentication with email & password, inline error messages
 - **Dashboard** — Exam cards with status badges (Upcoming/Past), colored tag pills, icon-boxed stats grid, schedule section. "View Candidates" opens a dialog with submitted results table. Delete exam support
 - **Create Online Test** — Multi-step form with animated stepper:
   - Step 1: Title, Capacity & Structure, Type & Duration, Schedule, Negative Marking (bordered card)
-  - Step 2: Add/Edit/Delete questions with hover-reveal buttons. Supports Radio, Checkbox, and Text types
+  - Step 2: Professional inline question form with type-specific layouts:
+    - **Radio (Single Choice)** — Options with correct answer selector via radio buttons
+    - **Checkbox (Multiple Choice)** — Options with multiple correct answer checkboxes
+    - **Text (Essay/Short Answer)** — Expected answer / keywords field
+  - Correct answer stored per question in the database
+  - Always-visible edit/delete buttons on question cards
 - **Logout** — Profile dropdown menu with logout option
 
 ### Candidate Panel
-- **Login** — JWT authentication with registration support for new candidates
+- **Login** (`/candidate/login`) — Clean login-only page with inline error display
+- **Register** (`/candidate/register`) — Dedicated registration page with:
+  - Full Name, Email, Password, Confirm Password fields
+  - Real-time validation hints (password length, passwords match)
+  - Proper error handling with AlertCircle icon
 - **Dashboard** — Assessment grid with pagination controls and per-page selector (4, 8, 12, 20). Shows duration, question count, negative marking, and completion status
 - **Exam Screen** — One-at-a-time question flow with:
   - Skip / Save & Continue navigation
@@ -126,7 +152,8 @@ Copy `.env.example` to `.env` and update:
 - Role-based access control (EMPLOYER / CANDIDATE)
 - Password hashing with bcryptjs
 - Bearer token extraction with middleware validation
-- Auto-refresh on 401 with request queue (no duplicate refresh calls)
+- Auto-refresh on 401 with request queue (skips auth routes to prevent redirect loops)
+- Separate login and register pages with isolated state (no cross-contamination)
 
 ### API Routes
 
@@ -137,7 +164,7 @@ Copy `.env.example` to `.env` and update:
 | `POST` | `/api/auth/refresh` | No | Refresh access token |
 | `GET` | `/api/auth/me` | Yes | Get current user profile |
 | `GET` | `/api/exams` | Yes | List exams (employer: own, candidate: all) |
-| `POST` | `/api/exams` | Employer | Create exam with questions |
+| `POST` | `/api/exams` | Employer | Create exam with questions + correct answers |
 | `GET` | `/api/exams/:id` | Yes | Get exam by ID with questions |
 | `DELETE` | `/api/exams/:id` | Employer | Delete exam |
 | `GET` | `/api/results` | Yes | Get results (employer: by examId, candidate: own) |
@@ -154,7 +181,7 @@ User ──────────── 1:N ──── Exam
   │                          │
   │                          1:N
   │                          │
-  │                       Question
+  │                       Question (with correctAnswer)
   │
   └── 1:N ──── CandidateResult ──── N:1 ── Exam
   │
@@ -163,7 +190,7 @@ User ──────────── 1:N ──── Exam
 
 - **User** — EMPLOYER or CANDIDATE role, email (unique), hashed password
 - **Exam** — Title, capacity, slots, question sets, schedule, duration, negative marking
-- **Question** — Title, type (radio/checkbox/text), options array, order
+- **Question** — Title, type (radio/checkbox/text), options array, correctAnswer (optional), order
 - **CandidateResult** — Answers (JSON), tab switches, fullscreen exits, unique per candidate+exam
 - **RefreshToken** — Token string, expiry, linked to user
 
@@ -184,7 +211,8 @@ User ──────────── 1:N ──── Exam
 │   │   ├── candidate/
 │   │   │   ├── dashboard/     # Assessment grid with pagination
 │   │   │   ├── exam/[id]/     # Exam screen (one-at-a-time flow)
-│   │   │   ├── login/         # Candidate login + registration
+│   │   │   ├── login/         # Candidate login (login only)
+│   │   │   ├── register/      # Candidate registration (dedicated page)
 │   │   │   └── layout.tsx     # Candidate layout with auth guard
 │   │   ├── employer/
 │   │   │   ├── dashboard/     # Exam cards + create-test form
@@ -197,7 +225,7 @@ User ──────────── 1:N ──── Exam
 │   │   ├── layout/            # Header (with dropdown logout), Footer
 │   │   └── ui/                # ShadCN/UI components (14 components)
 │   ├── hooks/
-│   │   ├── useAuth.ts         # Login/register with API client
+│   │   ├── useAuth.ts         # Login/register with API client + clearError
 │   │   ├── useTimer.ts        # Countdown timer for exams
 │   │   └── useProctoring.ts   # Fullscreen + tab switch detection
 │   ├── lib/
@@ -205,7 +233,7 @@ User ──────────── 1:N ──── Exam
 │   │   ├── auth/jwt.ts        # Sign/verify access & refresh tokens
 │   │   ├── auth/rateLimit.ts  # In-memory rate limiter
 │   │   ├── auth/withAuth.ts   # Auth middleware for API routes
-│   │   ├── db/prisma.ts       # Prisma singleton (Neon adapter)
+│   │   ├── db/prisma.ts       # Prisma singleton (PrismaNeon config adapter)
 │   │   └── types.ts           # Shared TypeScript interfaces
 │   └── store/
 │       ├── useEmployerStore.ts # Employer state (user, exams, tokens)
@@ -220,10 +248,12 @@ User ──────────── 1:N ──── Exam
 
 ## Architecture Highlights
 
-- **Prisma 7 Adapter Pattern** — Uses `PrismaNeon` adapter with `@neondatabase/serverless` Pool for edge-compatible database access
-- **Token Auto-Refresh** — Axios response interceptor catches 401s, queues pending requests, refreshes token, then replays the queue
+- **Prisma 7 Adapter Pattern** — Uses `PrismaNeon` with config object `{ connectionString }` (v7 creates its own Pool internally)
+- **Token Auto-Refresh** — Axios response interceptor catches 401s on non-auth routes, queues pending requests, refreshes token, then replays the queue
+- **Auth Route Protection** — 401 interceptor skips `/auth/*` routes so login errors display inline instead of triggering redirects
 - **Rate Limiting** — In-memory store with configurable window/max, auto-cleanup every 5 minutes
-- **Layout Auth Guards** — `usePathname()` in layouts hides profile/logout on login pages, showing only the logo
+- **Layout Auth Guards** — `usePathname()` in layouts hides profile/logout on login and register pages
+- **Isolated Auth State** — Login and register pages use local `useState` instead of shared hooks to prevent state leaks
 - **Memoized Components** — `React.memo` on ExamCard, `useCallback` for event handlers
 - **CSS Animations** — Custom keyframes for splash screen, completion dialog, timeout dialog (all in globals.css)
 - **Base UI Compatibility** — `DropdownMenuLabel` wrapped in `DropdownMenuGroup` for MenuGroupRootContext; Select uses `value` (controlled) instead of `defaultValue`
@@ -263,10 +293,6 @@ Yes. I have used Amazon Q Developer which operates through a Model Context Proto
 5. **Conflict Resolution:** Include a timestamp with each queued submission. The server validates that the submission timestamp falls within the exam window before accepting it.
 
 ---
-
-## Live Demo
-
-*(Link will be added after deployment)*
 
 ## Video Recording
 
